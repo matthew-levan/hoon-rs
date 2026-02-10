@@ -5,6 +5,7 @@ Rust based tools for the [Hoon language](https://docs.urbit.org/hoon/why-hoon).
 ## Setup
 
 You will need Rust nightly. Check `./rust-toolchain.toml` for details.
+
 Nix users are recommended to use [Devenv](https;//devenv.sh). The included `devenv.nix` file will automatically build a developer environment for you.
 
 ## Packages
