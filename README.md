@@ -55,7 +55,7 @@ command = "<absolute path to this repo>/target/debug/hoon-lsp"
 
 A code formatter for Hoon. It depends on `hoon-parser`.
 
-** NOTE** It is currently broken as it depends on a different fork of `hoon-parser` which can preserve the different wide/tall/irregular syntax of various runes. Coming soon™.
+**NOTE** Formatter is currently broken as it depends on a different fork of `hoon-parser` which can preserve the different wide/tall/irregular syntax of various runes. Coming soon™.
 
 To build run:
 `cargo build -p hoon-fmt`.
