@@ -1,0 +1,25 @@
+[package]
+name = "hoon-parser"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+
+[dependencies]
+ariadne = "0.5.1"
+chumsky = {workspace = true}
+serde = { workspace = true, features = ["derive"] }
+num-bigint = { workspace = true, features = ["serde"] }
+num-traits = {workspace = true}
+sha2 = {workspace = true}
+clap = { workspace = true, features = ["derive"] }
+serde_json = {workspace = true}
+
+
+[[bin]]
+name = "hoon-parser"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"

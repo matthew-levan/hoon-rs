@@ -1,0 +1,22 @@
+[package]
+name = "hoon-fmt"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+parser = { package = "hoon-parser", path = "../hoon-parser" }
+chumsky = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+num-bigint = { version = "0.4.6" }
+indexmap = { version = "2" }
+
+[[bin]]
+name = "hoonfmt"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
