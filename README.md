@@ -37,7 +37,17 @@ To use you'll need to manually added to your IDE config.
 _Users please edit this_
 
 #### Neovim:
-_Users please edit this_
+
+Add the following to your [`nvim-lspconfig`](https://github.com/neovim/nvim-lspconfig) `.lua` file:
+
+```lua
+vim.lsp.config('hoon-lsp', {
+  cmd = { '/path/to/hoon-rs/target/debug/hoon-lsp', '--stdio' },
+  filetypes = { 'bill', 'docket-0', 'hoon', 'kelvin' },
+})
+
+vim.lsp.enable 'hoon-lsp'
+```
 
 #### Helix:
 
