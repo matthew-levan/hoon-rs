@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/MatthewLeVan/hoon-rs"
+    "url": "https://github.com/matthew-levan/hoon-rs"
   },
   "engines": {
     "vscode": "^1.85.0"
