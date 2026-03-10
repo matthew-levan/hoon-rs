@@ -36,7 +36,7 @@ jobs:
             target: aarch64-apple-darwin
             binary: hoon-lsp
             artifact: hoon-lsp-darwin-aarch64
-          - os: macos-13           # Intel runner
+          - os: macos-14           # Cross-compile x86_64 from Apple Silicon runner
             target: x86_64-apple-darwin
             binary: hoon-lsp
             artifact: hoon-lsp-darwin-x86_64
