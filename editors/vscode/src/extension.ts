@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (choice === "Open Releases") {
           vscode.env.openExternal(
             vscode.Uri.parse(
-              "https://github.com/MatthewLeVan/hoon-rs/releases"
+              "https://github.com/matthew-levan/hoon-rs/releases"
             )
           );
         }

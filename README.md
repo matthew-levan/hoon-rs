@@ -35,10 +35,10 @@ To use you'll need to manually added to your IDE config.
 
 #### VS Code
 
-Install the **Hoon** extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MatthewLeVan.hoon):
+Install the **Hoon** extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MatthewLeVan.hoon-lsp):
 
 ```
-ext install MatthewLeVan.hoon
+ext install MatthewLeVan.hoon-lsp
 ```
 
 Or search for **"Hoon"** in the Extensions panel (`Ctrl+Shift+X` / `Cmd+Shift+X`).
