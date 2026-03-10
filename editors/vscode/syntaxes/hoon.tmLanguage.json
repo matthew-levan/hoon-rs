@@ -1,0 +1,288 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Hoon",
+  "scopeName": "source.hoon",
+  "fileTypes": ["hoon"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#triple-string-single" },
+    { "include": "#triple-string-double" },
+    { "include": "#string-tape" },
+    { "include": "#string-cord" },
+    { "include": "#arm-definition" },
+    { "include": "#terminator" },
+    { "include": "#loobean-constant" },
+    { "include": "#term-constant" },
+    { "include": "#number-date" },
+    { "include": "#number-ship" },
+    { "include": "#number-relative-date" },
+    { "include": "#number-ipv4" },
+    { "include": "#number-float" },
+    { "include": "#number-hex" },
+    { "include": "#number-binary" },
+    { "include": "#number-base32" },
+    { "include": "#number-base64" },
+    { "include": "#number-decimal" },
+    { "include": "#aura" },
+    { "include": "#ford-rune" },
+    { "include": "#rune-bar" },
+    { "include": "#rune-tis" },
+    { "include": "#rune-wut" },
+    { "include": "#rune-cen" },
+    { "include": "#rune-col" },
+    { "include": "#rune-sig" },
+    { "include": "#rune-buc" },
+    { "include": "#rune-ket" },
+    { "include": "#rune-zap" },
+    { "include": "#rune-mic" },
+    { "include": "#rune-dot" },
+    { "include": "#null-literal" },
+    { "include": "#wing" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-colon.hoon",
+      "match": "::.*$"
+    },
+
+    "triple-string-single": {
+      "name": "string.quoted.triple.single.hoon",
+      "begin": "'''",
+      "end": "'''",
+      "patterns": [
+        {
+          "name": "constant.character.escape.hoon",
+          "match": "\\\\(?:[\\\\']|[0-9a-fA-F]{2})"
+        }
+      ]
+    },
+
+    "triple-string-double": {
+      "name": "string.quoted.triple.double.hoon",
+      "begin": "\"\"\"",
+      "end": "\"\"\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.hoon",
+          "match": "\\\\(?:[\\\\\"{}]|[0-9a-fA-F]{2})"
+        },
+        { "include": "#string-interpolation" }
+      ]
+    },
+
+    "string-tape": {
+      "name": "string.quoted.double.hoon",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.hoon",
+          "match": "\\\\(?:[\\\\\"{}n]|[0-9a-fA-F]{2})"
+        },
+        { "include": "#string-interpolation" }
+      ]
+    },
+
+    "string-cord": {
+      "name": "string.quoted.single.hoon",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.hoon",
+          "match": "\\\\(?:[\\\\']|[0-9a-fA-F]{2})"
+        }
+      ]
+    },
+
+    "string-interpolation": {
+      "name": "meta.interpolation.hoon",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.interpolation.begin.hoon" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.interpolation.end.hoon" }
+      },
+      "patterns": [{ "include": "$self" }]
+    },
+
+    "arm-definition": {
+      "comment": "Arm definition markers inside core bodies: ++, +$, +|, +-, +=, +*",
+      "match": "^(\\s*)(\\+\\+|\\+\\$|\\+\\||\\+-|\\+=|\\+\\*)(?:\\s+([a-z][a-z0-9-]*))?",
+      "captures": {
+        "2": { "name": "keyword.declaration.arm.hoon" },
+        "3": { "name": "entity.name.function.hoon" }
+      }
+    },
+
+    "terminator": {
+      "comment": "Core terminator -- and list terminator ==",
+      "match": "(?<![a-z0-9-])(==|--)(?![a-z0-9-])",
+      "name": "keyword.control.terminator.hoon"
+    },
+
+    "loobean-constant": {
+      "comment": "Loobean yes/no: %.y %.n",
+      "match": "%\\.[yn]",
+      "name": "constant.language.boolean.hoon"
+    },
+
+    "term-constant": {
+      "comment": "Term/tag literal: %foo, %foo-bar, %$",
+      "match": "%(?:'[^']*'|\\$|[a-z][a-z0-9-]*)",
+      "name": "constant.other.term.hoon"
+    },
+
+    "number-date": {
+      "comment": "Absolute date literal: ~2023.1.1 or ~2023.1.1..12.0.0",
+      "match": "~[0-9]{1,4}(?:\\.[0-9]{1,2}){1,2}(?:\\.\\.[0-9]{1,2}(?:\\.[0-9]{1,2}){0,2}(?:\\.\\.[0-9a-f]+)?)?",
+      "name": "constant.numeric.date.hoon"
+    },
+
+    "number-ship": {
+      "comment": "Phonemic ship address: ~zod, ~sampel-palnet, etc.",
+      "match": "~(?:[a-z]{3,6}(?:-[a-z]{3,6})*)",
+      "name": "constant.numeric.ship.hoon"
+    },
+
+    "number-relative-date": {
+      "comment": "Relative date (duration): ~m5, ~h1, ~d1, ~s30",
+      "match": "~[smhd][0-9]+",
+      "name": "constant.numeric.duration.hoon"
+    },
+
+    "number-ipv4": {
+      "comment": "IPv4 literal: .127.0.0.1",
+      "match": "\\.[0-9]{1,3}(?:\\.[0-9]{1,3}){3}",
+      "name": "constant.numeric.ipv4.hoon"
+    },
+
+    "number-float": {
+      "comment": "Single-precision float: .3.14, .n.3.14",
+      "match": "\\.(?:n\\.)?[0-9]+\\.[0-9]+",
+      "name": "constant.numeric.float.hoon"
+    },
+
+    "number-hex": {
+      "comment": "Hexadecimal: 0x1f, 0xdead.beef",
+      "match": "0x[0-9a-f]+(?:\\.[0-9a-f]{4})*",
+      "name": "constant.numeric.hex.hoon"
+    },
+
+    "number-binary": {
+      "comment": "Binary: 0b1010, 0b1.0101",
+      "match": "0b[01]+(?:\\.[01]{4})*",
+      "name": "constant.numeric.binary.hoon"
+    },
+
+    "number-base32": {
+      "comment": "Base-32: 0v1e.1abc",
+      "match": "0v[0-9a-v]+(?:\\.[0-9a-v]{5})*",
+      "name": "constant.numeric.base32.hoon"
+    },
+
+    "number-base64": {
+      "comment": "Base-64: 0w1e.ABCD",
+      "match": "0w[-~0-9a-zA-Z]+(?:\\.[-~0-9a-zA-Z]{5})*",
+      "name": "constant.numeric.base64.hoon"
+    },
+
+    "number-decimal": {
+      "comment": "Unsigned decimal: 42, 1.000.000",
+      "match": "(?<![a-z0-9-])[0-9]+(?:\\.[0-9]{3})*(?![a-z0-9-])",
+      "name": "constant.numeric.decimal.hoon"
+    },
+
+    "aura": {
+      "comment": "Aura type annotation: @ud, @t, @p, @da, bare @",
+      "match": "@[a-z]*[A-Z]*",
+      "name": "storage.type.aura.hoon"
+    },
+
+    "ford-rune": {
+      "comment": "Ford import runes: /-, /+, /=, /*, /#, /?",
+      "match": "/[-+=*#?]",
+      "name": "keyword.control.ford.hoon"
+    },
+
+    "rune-bar": {
+      "comment": "Bar runes: |= |% |- |. |* |_ |@ |~ |^ |: |$ |?",
+      "match": "\\|[=%\\-\\.\\*_@~\\^:\\$\\?]",
+      "name": "keyword.operator.rune.bar.hoon"
+    },
+
+    "rune-tis": {
+      "comment": "Tis runes: =| =. =? =^ =: =/ =; =< => =- =* =, =+ =~",
+      "match": "=[|.?\\^:/;<>=\\-*,+~]",
+      "name": "keyword.operator.rune.tis.hoon"
+    },
+
+    "rune-wut": {
+      "comment": "Wut runes: ?~ ?: ?. ?| ?> ?< ?^ ?& ?@ ?= ?+ ?- ?!",
+      "match": "\\?[~:.|\\.><\\^&@=+\\-!]",
+      "name": "keyword.operator.rune.wut.hoon"
+    },
+
+    "rune-cen": {
+      "comment": "Cen runes: %_ %. %^ %+ %- %: %~ %* %=",
+      "match": "%[_.\\^+\\-:~*=]",
+      "name": "keyword.operator.rune.cen.hoon"
+    },
+
+    "rune-col": {
+      "comment": "Col runes: :^ :_ :+ :- :* :~",
+      "match": ":[\\^_+\\-*~]",
+      "name": "keyword.operator.rune.col.hoon"
+    },
+
+    "rune-sig": {
+      "comment": "Sig runes: ~% ~/ ~_ ~+ ~! ~| ~> ~< ~& ~? ~= ~^",
+      "match": "~[%/\\_+!|><&?=\\^]",
+      "name": "keyword.operator.rune.sig.hoon"
+    },
+
+    "rune-buc": {
+      "comment": "Buc runes: $@ $_ $: $% $< $> $| $& $^ $~ $- $= $? $+ $. $,",
+      "match": "\\$[@_:%<>|&\\^~\\-=?+\\.,]",
+      "name": "keyword.operator.rune.buc.hoon"
+    },
+
+    "rune-ket": {
+      "comment": "Ket runes: ^| ^. ^- ^+ ^& ^~ ^= ^? ^* ^:",
+      "match": "\\^[|.\\-+&~=?*:]",
+      "name": "keyword.operator.rune.ket.hoon"
+    },
+
+    "rune-zap": {
+      "comment": "Zap runes: !: !. !, !; !> !< !@ != !? !!",
+      "match": "![:.;,><@=?!]",
+      "name": "keyword.operator.rune.zap.hoon"
+    },
+
+    "rune-mic": {
+      "comment": "Mic runes: ;; ;: ;/ ;< ;~ ;=",
+      "match": ";[;:/<=~=]",
+      "name": "keyword.operator.rune.mic.hoon"
+    },
+
+    "rune-dot": {
+      "comment": "Dot runes: .+ .* .= .? .^",
+      "match": "\\.[+*.?\\^]",
+      "name": "keyword.operator.rune.dot.hoon"
+    },
+
+    "null-literal": {
+      "comment": "Null / sig / zero: bare ~",
+      "match": "(?<![a-z~])~(?![a-z\\.0-9%/\\-_+!|><&?=\\^])",
+      "name": "constant.language.null.hoon"
+    },
+
+    "wing": {
+      "comment": "Identifiers: lowercase terms/faces used as wing limbs",
+      "match": "[a-z][a-z0-9-]*",
+      "name": "variable.other.wing.hoon"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "name": "hoon",
+  "displayName": "Hoon",
+  "description": "Hoon language support for VS Code — syntax highlighting, diagnostics, hover, and go-to-definition via hoon-lsp.",
+  "version": "0.1.0",
+  "publisher": "MatthewLeVan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MatthewLeVan/hoon-rs"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "hoon",
+    "urbit",
+    "nockchain"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "icon": "icons/hoon.png",
+  "contributes": {
+    "languages": [
+      {
+        "id": "hoon",
+        "aliases": [
+          "Hoon",
+          "hoon"
+        ],
+        "extensions": [
+          ".hoon"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "hoon",
+        "scopeName": "source.hoon",
+        "path": "./syntaxes/hoon.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Hoon",
+      "properties": {
+        "hoonLsp.debounceMs": {
+          "type": "number",
+          "default": 75,
+          "description": "Milliseconds to wait after a file change before re-parsing."
+        },
+        "hoonLsp.workspaceRefreshMs": {
+          "type": "number",
+          "default": 30000,
+          "description": "Milliseconds between workspace re-index cycles."
+        },
+        "hoonLsp.maxWorkspaceFiles": {
+          "type": "number",
+          "default": 10000,
+          "description": "Maximum number of files to index in the workspace."
+        },
+        "hoonLsp.followSymlinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to follow symlinks when indexing the workspace."
+        },
+        "hoonLsp.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace LSP communication in the Output panel."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.3.3"
+  }
+}

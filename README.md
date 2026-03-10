@@ -33,8 +33,29 @@ To build run:
 
 To use you'll need to manually added to your IDE config.
 
-#### VS Code-like editors
-_Users please edit this_
+#### VS Code
+
+Install the **Hoon** extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=MatthewLeVan.hoon):
+
+```
+ext install MatthewLeVan.hoon
+```
+
+Or search for **"Hoon"** in the Extensions panel (`Ctrl+Shift+X` / `Cmd+Shift+X`).
+
+The extension bundles pre-built `hoon-lsp` binaries for:
+- macOS (Apple Silicon & Intel)
+- Linux x86_64
+- Windows x86_64
+
+**Features:** syntax highlighting, parse error diagnostics, hover documentation, and go-to-definition.
+
+**Building locally** (if your platform is not covered):
+```bash
+cargo build --release -p hoon-lsp
+# Then add target/release to your PATH so VSCode can find hoon-lsp:
+export PATH="$PWD/target/release:$PATH"
+```
 
 #### Neovim:
 
@@ -76,8 +97,9 @@ To test run:
 
 To use you'll need to manually added to your IDE config.
 
-#### VS Code-like editors
-_Users please edit this_
+#### VS Code
+
+The **Hoon** extension also integrates `hoonfmt` as a document formatter. Once formatter support is complete, the extension will automatically use it. No extra configuration needed.
 
 #### Neovim:
 _Users please edit this_

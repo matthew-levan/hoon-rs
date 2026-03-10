@@ -1,0 +1,207 @@
+# Builds hoon-lsp for all platforms, packages the VSCode extension, and publishes it.
+#
+# Triggers:
+#   - Push of a version tag (v*.*.*) → builds, packages, creates GitHub Release,
+#     and publishes to the VSCode Marketplace.
+#   - Manual workflow_dispatch → builds and packages only (no publish).
+
+name: VSCode Extension
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Build hoon-lsp for each target platform
+  # ─────────────────────────────────────────────
+  build-lsp:
+    name: Build hoon-lsp (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            binary: hoon-lsp
+            artifact: hoon-lsp-linux-x86_64
+          - os: macos-14           # Apple Silicon runner
+            target: aarch64-apple-darwin
+            binary: hoon-lsp
+            artifact: hoon-lsp-darwin-aarch64
+          - os: macos-13           # Intel runner
+            target: x86_64-apple-darwin
+            binary: hoon-lsp
+            artifact: hoon-lsp-darwin-x86_64
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            binary: hoon-lsp.exe
+            artifact: hoon-lsp-windows-x86_64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (nightly, pinned)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-11-26
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo registry + build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build hoon-lsp
+        run: cargo build --release -p hoon-lsp --target ${{ matrix.target }}
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          SRC="target/${{ matrix.target }}/release/${{ matrix.binary }}"
+          DST="${{ matrix.artifact }}"
+          cp "$SRC" "$DST"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────
+  # Assemble and package the VSCode extension
+  # ─────────────────────────────────────────────
+  package-extension:
+    name: Package VSCode extension
+    runs-on: ubuntu-22.04
+    needs: build-lsp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: editors/vscode/package-lock.json
+
+      - name: Install extension dependencies
+        working-directory: editors/vscode
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: editors/vscode
+        run: npm run compile
+
+      # Download all four platform binaries into editors/vscode/bin/
+      - name: Download Linux x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-linux-x86_64
+          path: editors/vscode/bin/
+
+      - name: Download macOS aarch64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-darwin-aarch64
+          path: editors/vscode/bin/
+
+      - name: Download macOS x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-darwin-x86_64
+          path: editors/vscode/bin/
+
+      - name: Download Windows x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-windows-x86_64.exe
+          path: editors/vscode/bin/
+
+      - name: Make binaries executable
+        run: chmod +x editors/vscode/bin/hoon-lsp-linux-x86_64 editors/vscode/bin/hoon-lsp-darwin-*
+
+      - name: Package .vsix
+        working-directory: editors/vscode
+        run: npx vsce package --no-git-tag-version
+
+      - name: Upload .vsix artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hoon-vscode-extension
+          path: editors/vscode/*.vsix
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────
+  # Create GitHub Release + publish to Marketplace
+  # (only on version tag pushes)
+  # ─────────────────────────────────────────────
+  release:
+    name: Release
+    runs-on: ubuntu-22.04
+    needs: package-extension
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download .vsix
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-vscode-extension
+          path: dist/
+
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-linux-x86_64
+          path: dist/
+
+      - name: Download macOS aarch64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-darwin-aarch64
+          path: dist/
+
+      - name: Download macOS x86_64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-darwin-x86_64
+          path: dist/
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: hoon-lsp-windows-x86_64.exe
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+      - name: Set up Node.js (for publish)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Publish to VS Code Marketplace
+        working-directory: editors/vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: vsce publish --packagePath ../dist/*.vsix
