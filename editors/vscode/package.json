@@ -2,7 +2,7 @@
   "name": "hoon-lsp",
   "displayName": "Hoon LSP",
   "description": "Hoon language support for VS Code — syntax highlighting, diagnostics, hover, and go-to-definition via hoon-lsp.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "MatthewLeVan",
   "license": "MIT",
   "repository": {
