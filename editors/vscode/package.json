@@ -82,19 +82,19 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "compile": "tsc --noEmit",
+    "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --watch",
     "package": "vsce package",
     "publish": "vsce publish"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.24.0",
-    "typescript": "^5.3.3"
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3",
+    "vscode-languageclient": "^9.0.1"
   }
 }
