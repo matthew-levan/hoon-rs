@@ -1,6 +1,6 @@
 {
   "name": "hoon-lsp",
-  "displayName": "Hoon",
+  "displayName": "Hoon LSP",
   "description": "Hoon language support for VS Code — syntax highlighting, diagnostics, hover, and go-to-definition via hoon-lsp.",
   "version": "0.1.0",
   "publisher": "MatthewLeVan",
