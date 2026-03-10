@@ -201,7 +201,8 @@ jobs:
         run: npm install -g @vscode/vsce
 
       - name: Publish to VS Code Marketplace
-        working-directory: editors/vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: vsce publish --packagePath ../dist/*.vsix
+        run: |
+          VSIX=$(ls dist/*.vsix | head -1)
+          vsce publish --packagePath "$VSIX"
