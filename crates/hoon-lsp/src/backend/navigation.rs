@@ -8,24 +8,33 @@ impl Backend {
         allow_workspace_scan: bool,
     ) -> Vec<Location> {
         trace!(uri = %uri, symbol, allow_workspace_scan, "resolve_definition_matches start");
-        let mut matches = self.workspace_index.local_definitions_for_symbol(uri, symbol);
+        let mut matches = self
+            .workspace_index
+            .local_definitions_for_symbol(uri, symbol);
         debug!(uri = %uri, symbol, matches = matches.len(), "local definition matches");
         if matches.is_empty() {
-            matches = self.workspace_index.imported_definitions_for_symbol(uri, symbol);
+            matches = self
+                .workspace_index
+                .imported_definitions_for_symbol(uri, symbol);
             debug!(uri = %uri, symbol, matches = matches.len(), "imported definition matches");
         }
         if matches.is_empty() {
             matches = self.workspace_index.definitions_for_symbol(symbol);
             matches.retain(|loc| &loc.uri != uri);
+            // If any results are from user files (non-stdlib), drop the stdlib ones
+            // so we don't show both e.g. the repo definition and the /var/folders copy.
+            if matches
+                .iter()
+                .any(|loc| !self.workspace_index.is_stdlib_location(loc))
+            {
+                matches.retain(|loc| !self.workspace_index.is_stdlib_location(loc));
+            }
             debug!(uri = %uri, symbol, matches = matches.len(), "workspace-index symbol matches");
         }
         if allow_workspace_scan && matches.is_empty() {
             let cfg = self.config_snapshot();
             matches = workspace_definitions_for_symbol(
-                uri,
-                symbol,
-                cfg.max_workspace_files,
-                cfg.follow_symlinks,
+                uri, symbol, cfg.max_workspace_files, cfg.follow_symlinks,
             );
             debug!(uri = %uri, symbol, matches = matches.len(), "workspace scan matches");
         }
@@ -44,20 +53,26 @@ impl Backend {
             allow_workspace_scan,
             "resolve_definition_matches_without_local start"
         );
-        let mut matches = self.workspace_index.imported_definitions_for_symbol(uri, symbol);
+        let mut matches = self
+            .workspace_index
+            .imported_definitions_for_symbol(uri, symbol);
         debug!(uri = %uri, symbol, matches = matches.len(), "imported definition matches");
         if matches.is_empty() {
             matches = self.workspace_index.definitions_for_symbol(symbol);
             matches.retain(|loc| &loc.uri != uri);
+            // If any results are from user files (non-stdlib), drop the stdlib ones.
+            if matches
+                .iter()
+                .any(|loc| !self.workspace_index.is_stdlib_location(loc))
+            {
+                matches.retain(|loc| !self.workspace_index.is_stdlib_location(loc));
+            }
             debug!(uri = %uri, symbol, matches = matches.len(), "workspace-index symbol matches");
         }
         if allow_workspace_scan && matches.is_empty() {
             let cfg = self.config_snapshot();
             matches = workspace_definitions_for_symbol(
-                uri,
-                symbol,
-                cfg.max_workspace_files,
-                cfg.follow_symlinks,
+                uri, symbol, cfg.max_workspace_files, cfg.follow_symlinks,
             );
             debug!(uri = %uri, symbol, matches = matches.len(), "workspace scan matches");
         }

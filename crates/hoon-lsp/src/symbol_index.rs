@@ -1,8 +1,9 @@
-use parser::{definitions_with_metadata, parse_with_metadata, DefinitionKind, ImportKind};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+
+use parser::{definitions_with_metadata, parse_with_metadata, DefinitionKind, ImportKind};
 use tower_lsp::lsp_types::{DocumentSymbol, Location, Position, SymbolKind, Url};
 use tracing::{debug, trace, warn};
 use walkdir::WalkDir;
@@ -50,10 +51,7 @@ impl WorkspaceIndex {
 
     pub fn upsert_document(&self, uri: &Url, text: &str) {
         let (defs, imports, path) = file_metadata(uri, text);
-        let stdlib_rank = path
-            .as_deref()
-            .and_then(stdlib_rank_for_path)
-            .unwrap_or(0);
+        let stdlib_rank = path.as_deref().and_then(stdlib_rank_for_path).unwrap_or(0);
         let new_file = IndexedFile {
             defs: defs.clone(),
             imports,
@@ -82,13 +80,22 @@ impl WorkspaceIndex {
         let inner = self.inner.read().expect("workspace index lock");
         let mut defs = inner.by_symbol.get(symbol).cloned().unwrap_or_default();
         defs.sort_by(|a, b| {
-            stdlib_rank_for_location(&inner, b)
-                .cmp(&stdlib_rank_for_location(&inner, a))
+            stdlib_rank_for_location(&inner, b).cmp(&stdlib_rank_for_location(&inner, a))
         });
         defs
     }
 
-    pub fn imported_definitions_for_symbol(&self, current_uri: &Url, symbol: &str) -> Vec<Location> {
+    /// Returns true if the given location points to a bundled stdlib file.
+    pub fn is_stdlib_location(&self, loc: &Location) -> bool {
+        let inner = self.inner.read().expect("workspace index lock");
+        stdlib_rank_for_location(&inner, loc) > 0
+    }
+
+    pub fn imported_definitions_for_symbol(
+        &self,
+        current_uri: &Url,
+        symbol: &str,
+    ) -> Vec<Location> {
         let inner = self.inner.read().expect("workspace index lock");
         let Some(current_file_uri) = canonicalize_current_uri(&inner, current_uri) else {
             debug!(uri = %current_uri, symbol, "import lookup: current uri not indexed");
@@ -131,7 +138,10 @@ impl WorkspaceIndex {
             "import buckets"
         );
 
-        for import in explicit_imports.into_iter().chain(wildcard_imports.into_iter()) {
+        for import in explicit_imports
+            .into_iter()
+            .chain(wildcard_imports.into_iter())
+        {
             if let Some(visible) = &import.visible_symbol {
                 if visible != symbol {
                     continue;
@@ -151,10 +161,7 @@ impl WorkspaceIndex {
             }
 
             let candidates = resolve_import_candidates_from_index(
-                current_path,
-                &workspace_root,
-                import,
-                &inner.by_path,
+                current_path, &workspace_root, import, &inner.by_path,
             );
             debug!(
                 uri = %current_uri,
@@ -259,10 +266,7 @@ impl WorkspaceIndex {
             }
 
             let candidates = resolve_import_candidates_from_index(
-                current_path,
-                &workspace_root,
-                import,
-                &inner.by_path,
+                current_path, &workspace_root, import, &inner.by_path,
             );
             trace!(
                 uri = %current_uri,
@@ -416,7 +420,9 @@ pub fn extract_defs(text: &str) -> Vec<(String, tower_lsp::lsp_types::Range)> {
         .collect()
 }
 
-fn extract_defs_with_kind(text: &str) -> Vec<(String, tower_lsp::lsp_types::Range, DefinitionKind)> {
+fn extract_defs_with_kind(
+    text: &str,
+) -> Vec<(String, tower_lsp::lsp_types::Range, DefinitionKind)> {
     definitions_with_metadata(text)
         .into_iter()
         .map(|def| {
@@ -435,11 +441,13 @@ pub fn document_symbols(text: &str) -> Vec<DocumentSymbol> {
         .into_iter()
         .map(|(name, range, kind)| DocumentSymbol {
             name,
-            detail: Some(match kind {
-                DefinitionKind::Arm => "++ arm",
-                DefinitionKind::Type => "+$ type",
-            }
-            .to_string()),
+            detail: Some(
+                match kind {
+                    DefinitionKind::Arm => "++ arm",
+                    DefinitionKind::Type => "+$ type",
+                }
+                .to_string(),
+            ),
             kind: match kind {
                 DefinitionKind::Arm => SymbolKind::FUNCTION,
                 DefinitionKind::Type => SymbolKind::STRUCT,
@@ -454,11 +462,7 @@ pub fn document_symbols(text: &str) -> Vec<DocumentSymbol> {
 }
 
 #[cfg(test)]
-pub fn local_definitions_for_symbol(
-    uri: &Url,
-    text: &str,
-    symbol: &str,
-) -> Vec<Location> {
+pub fn local_definitions_for_symbol(uri: &Url, text: &str, symbol: &str) -> Vec<Location> {
     extract_defs(text)
         .into_iter()
         .filter(|(name, _)| name == symbol)
@@ -568,7 +572,10 @@ fn path_to_wer(path: &Path) -> Vec<String> {
 }
 
 fn is_ident_byte(b: Option<u8>) -> bool {
-    matches!(b, Some(b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_'))
+    matches!(
+        b,
+        Some(b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_')
+    )
 }
 
 fn remove_defs(by_symbol: &mut HashMap<String, Vec<Location>>, defs: Vec<(String, Location)>) {
@@ -623,7 +630,10 @@ fn stdlib_rank_for_path(path: &Path) -> Option<u8> {
     }
 }
 
-fn file_metadata(uri: &Url, text: &str) -> (Vec<(String, Location)>, Vec<ImportBinding>, Option<PathBuf>) {
+fn file_metadata(
+    uri: &Url,
+    text: &str,
+) -> (Vec<(String, Location)>, Vec<ImportBinding>, Option<PathBuf>) {
     let Ok(path) = uri.to_file_path() else {
         let defs = extract_defs(text)
             .into_iter()
@@ -651,9 +661,7 @@ fn file_metadata(uri: &Url, text: &str) -> (Vec<(String, Location)>, Vec<ImportB
                 Location {
                     uri: uri.clone(),
                     range: range_from_byte_offsets(
-                        text,
-                        def.start_byte as usize,
-                        def.end_byte as usize,
+                        text, def.start_byte as usize, def.end_byte as usize,
                     ),
                 },
             )
@@ -666,7 +674,9 @@ fn file_metadata(uri: &Url, text: &str) -> (Vec<(String, Location)>, Vec<ImportB
         .into_iter()
         .flat_map(|decl| {
             let kind = decl.kind.clone();
-            decl.bindings.into_iter().map(move |binding| (binding, kind.clone()))
+            decl.bindings
+                .into_iter()
+                .map(move |binding| (binding, kind.clone()))
         })
         .map(|(binding, kind)| ImportBinding {
             visible_symbol: binding.visible_symbol,
@@ -929,12 +939,14 @@ fn path_is_under_root(path: &Path, root: &Path, root_canon: Option<&Path>) -> bo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::fs;
     #[cfg(unix)]
     use std::os::unix::fs::symlink;
-    use std::fs;
     use std::path::PathBuf;
+
     use tempfile::tempdir;
+
+    use super::*;
 
     #[test]
     fn imported_definition_resolves_across_files() {
@@ -955,7 +967,9 @@ mod tests {
         let defs = index.imported_definitions_for_symbol(&main_uri, "foo");
 
         assert!(!defs.is_empty());
-        assert!(defs.iter().any(|loc| loc.uri == Url::from_file_path(&foo_path).expect("foo uri")));
+        assert!(defs
+            .iter()
+            .any(|loc| loc.uri == Url::from_file_path(&foo_path).expect("foo uri")));
     }
 
     #[test]
@@ -1058,8 +1072,7 @@ mod tests {
         let lib_helper_path = root.join("lib").join("helper.hoon");
         let alt_path = root.join("alt.hoon");
         fs::write(
-            &main_path,
-            "/= *  /alt\n/= helper  /lib/helper\n++  main\n  helper\n",
+            &main_path, "/= *  /alt\n/= helper  /lib/helper\n++  main\n  helper\n",
         )
         .expect("write main");
         fs::write(&lib_helper_path, "++  helper\n  ~\n").expect("write helper");
@@ -1187,7 +1200,10 @@ mod tests {
 
         let main_path = root.join("main.hoon");
         let a_path = root.join("alpha.hoon");
-        fs::write(&main_path, "/+ alpha  :: inline comment\n++  main\n  alpha\n").expect("write main");
+        fs::write(
+            &main_path, "/+ alpha  :: inline comment\n++  main\n  alpha\n",
+        )
+        .expect("write main");
         fs::write(&a_path, "++  alpha\n  ~\n").expect("write alpha");
 
         let main_uri = Url::from_file_path(&main_path).expect("main uri");
@@ -1257,8 +1273,7 @@ mod tests {
 
     #[test]
     fn workspace_index_corpus_smoke_example_hoon() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../parser/example-hoon");
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../parser/example-hoon");
         let index = WorkspaceIndex::new();
         let stats = index.index_workspace(&root, 5_000, false);
         assert!(stats.scanned_files > 0);
@@ -1268,8 +1283,7 @@ mod tests {
     #[test]
     #[ignore = "expensive corpus smoke; run manually when needed"]
     fn workspace_index_corpus_smoke_groups() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../parser/groups");
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../parser/groups");
         let index = WorkspaceIndex::new();
         let stats = index.index_workspace(&root, 250, false);
         assert!(stats.scanned_files > 0);
@@ -1278,8 +1292,7 @@ mod tests {
 
     #[test]
     fn workspace_index_corpus_smoke_landscape() {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../parser/landscape");
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../parser/landscape");
         let index = WorkspaceIndex::new();
         let stats = index.index_workspace(&root, 10_000, false);
         assert!(stats.scanned_files > 0);
@@ -1310,10 +1323,7 @@ mod tests {
         assert_eq!(stats.indexed_files, 1);
         let defs = index.definitions_for_symbol("foo");
         assert_eq!(defs.len(), 1);
-        assert_eq!(
-            defs[0].uri,
-            Url::from_file_path(&a_path).expect("a uri")
-        );
+        assert_eq!(defs[0].uri, Url::from_file_path(&a_path).expect("a uri"));
     }
 
     #[test]
