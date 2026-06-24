@@ -14,7 +14,16 @@ This is a Rust workspace containing several packages.
 
 ### Parser
 
-The Hoon parser is a fork of the [Nockchain hoon parser](https://github.com/nockchain/nockchain/tree/bitemyapp/parser-parse-arm-comparison-next-sail-atom-markdown-testing-squashed).
+The Hoon parser is a fork of the Nockchain hoon parser. It tracks the upstream
+[`crates/hatch`](https://github.com/nockchain/nockchain/tree/bitemyapp/native-compiler-pma-native-ir-types/crates/hatch)
+crate (branch `bitemyapp/native-compiler-pma-native-ir-types`), which superseded the
+earlier `crates/parser` on `bitemyapp/parser-parse-arm-comparison-next-sail-atom-markdown-testing-squashed`.
+
+This fork keeps only the pure parsing layer (chumsky → AST): the upstream noun/jam
+back-end and its `nockvm`/`nockapp`/`hoonc` dependencies are dropped so the parser (and
+the `hoon-lsp` binaries built from it) stay dependency-light and cross-compile cleanly.
+Upstream's doc-comment/help attachment (`Spec::Gist` / `Note::Help` / `Skin::Help`) is
+ported and available; like upstream it is opt-in via `LineMap::new_with_docs(src, true)`.
 
 To build run:
 `cargo build -p hoon-parser`.

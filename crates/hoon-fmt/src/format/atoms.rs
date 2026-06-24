@@ -325,6 +325,7 @@ impl Format for Chum {
 impl Format for Note {
     fn format(&self, config: &FormatterConfig) -> Doc {
         match self {
+            Note::Help(_) => Doc::text(String::new()),
             Note::Know(s) => Doc::text(format!("%{}", s)),
             Note::Made(s, wings) => {
                 let mut parts = vec![Doc::text(format!("%{}", s))];

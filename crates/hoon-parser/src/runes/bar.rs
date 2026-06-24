@@ -1,3 +1,4 @@
+use std::sync::Arc;
 
 use chumsky::prelude::*;
 
@@ -7,19 +8,20 @@ use crate::utils::*;
 pub fn bar_runes_tall<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> + 'src {
     choice((
-        just('%').ignore_then(barcen(hoon.clone(), spec.clone())),
+        just('%').ignore_then(barcen(hoon.clone(), spec.clone(), linemap.clone())),
         just('.').ignore_then(bardot(hoon.clone())),
         just('*').ignore_then(bartar(hoon.clone(), spec.clone())),
-        just('_').ignore_then(barcab(hoon.clone(), spec.clone())),
-        just('@').ignore_then(barpat(hoon.clone(), spec.clone())),
+        just('_').ignore_then(barcab(hoon.clone(), spec.clone(), linemap.clone())),
+        just('@').ignore_then(barpat(hoon.clone(), spec.clone(), linemap.clone())),
         just('=').ignore_then(bartis(hoon.clone(), spec.clone())),
         just('~').ignore_then(barsig(hoon.clone(), spec.clone())),
         just('-').ignore_then(barhep(hoon.clone())),
-        just('^').ignore_then(barket(hoon.clone(), spec.clone())),
+        just('^').ignore_then(barket(hoon.clone(), spec.clone(), linemap.clone())),
         just(':').ignore_then(barcol(hoon.clone())),
-        just('$').ignore_then(barbuc(spec.clone())),
+        just('$').ignore_then(barbuc(spec.clone(), linemap.clone())),
         just('?').ignore_then(barwut(hoon.clone())),
     ))
 }
@@ -27,6 +29,7 @@ pub fn bar_runes_tall<'src>(
 pub fn bar_runes_wide<'src>(
     hoon_wide: impl ParserExt<'src, Hoon>,
     spec_wide: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     choice((
         just('.').ignore_then(bardot_wide(hoon_wide.clone())),
@@ -34,9 +37,13 @@ pub fn bar_runes_wide<'src>(
         just('=').ignore_then(bartis_wide(hoon_wide.clone(), spec_wide.clone())),
         just('~').ignore_then(barsig_wide(hoon_wide.clone(), spec_wide.clone())),
         just('-').ignore_then(barhep_wide(hoon_wide.clone())),
-        just('^').ignore_then(barket_wide(hoon_wide.clone(), spec_wide.clone())),
+        just('^').ignore_then(barket_wide(
+            hoon_wide.clone(),
+            spec_wide.clone(),
+            linemap.clone(),
+        )),
         just(':').ignore_then(barcol_wide(hoon_wide.clone())),
-        just('$').ignore_then(barbuc_wide(spec_wide.clone())),
+        just('$').ignore_then(barbuc_wide(spec_wide.clone(), linemap.clone())),
         just('?').ignore_then(barwut_wide(hoon_wide.clone())),
     ))
 }
@@ -44,9 +51,10 @@ pub fn bar_runes_wide<'src>(
 fn barcen<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
-        .ignore_then(chapters(hoon.clone(), spec.clone()))
+        .ignore_then(chapters(hoon.clone(), spec.clone(), linemap))
         .map(|map_term_tome| Hoon::BarCen(None, map_term_tome))
 }
 
@@ -136,12 +144,23 @@ fn bartis_wide<'src>(
 
 pub fn barbuc<'src>(
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
         .ignore_then(barbuc_sample_tall())
         .then_ignore(gap())
-        .then(spec.clone())
-        .map(|(list, h)| Hoon::BarBuc(list, Box::new(h)))
+        .then(
+            spec.clone()
+                .map_with(|body: Spec, e| (body, e.span().start())),
+        )
+        .map(move |(list, (body, body_start))| {
+            let body = if let Some(help) = linemap.help_before_body_spec(body_start) {
+                Spec::Gist(help, Box::new(body))
+            } else {
+                body
+            };
+            Hoon::BarBuc(list, Box::new(body))
+        })
 }
 
 pub fn barbuc_sample_tall<'src>() -> impl Parser<'src, &'src str, Vec<String>, Err<'src>> {
@@ -154,12 +173,24 @@ pub fn barbuc_sample_tall<'src>() -> impl Parser<'src, &'src str, Vec<String>, E
 
 pub fn barbuc_wide<'src>(
     spec_wide: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     barbuc_sample_wide()
         .then_ignore(just(' '))
-        .then(spec_wide.clone())
+        .then(
+            spec_wide
+                .clone()
+                .map_with(|body: Spec, e| (body, e.span().start())),
+        )
         .delimited_by(just('('), just(')'))
-        .map(|(list, h)| Hoon::BarBuc(list, Box::new(h)))
+        .map(move |(list, (body, body_start))| {
+            let body = if let Some(help) = linemap.help_before_body_spec(body_start) {
+                Spec::Gist(help, Box::new(body))
+            } else {
+                body
+            };
+            Hoon::BarBuc(list, Box::new(body))
+        })
 }
 
 pub fn barbuc_sample_wide<'src>() -> impl Parser<'src, &'src str, Vec<String>, Err<'src>> {
@@ -205,22 +236,24 @@ pub fn barwut_wide<'src>(
 pub fn barket<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
         .ignore_then(hoon.clone())
         .then_ignore(gap())
-        .then(chapters(hoon.clone(), spec.clone()))
+        .then(chapters(hoon.clone(), spec.clone(), linemap))
         .map(|(h, map_term_tome)| Hoon::BarKet(Box::new(h), map_term_tome))
 }
 
 pub fn barket_wide<'src>(
     hoon_wide: impl ParserExt<'src, Hoon>,
     spec_wide: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     hoon_wide
         .clone()
         .then_ignore(just(' '))
-        .then(chapters(hoon_wide.clone(), spec_wide.clone()))
+        .then(chapters(hoon_wide.clone(), spec_wide.clone(), linemap))
         .delimited_by(just('('), just(')'))
         .map(|(h, map_term_tome)| Hoon::BarKet(Box::new(h), map_term_tome))
 }
@@ -228,15 +261,17 @@ pub fn barket_wide<'src>(
 pub fn barpat<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
-        .ignore_then(chapters(hoon.clone(), spec.clone()))
+        .ignore_then(chapters(hoon.clone(), spec.clone(), linemap))
         .map(|map_term_tome| Hoon::BarPat(None, map_term_tome))
 }
 
 pub fn barcab<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
+    linemap: Arc<LineMap>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     let aliases =     //   +*  foo  1
                 just("+*")
@@ -247,7 +282,7 @@ pub fn barcab<'src>(
         .ignore_then(spec.clone())
         .then_ignore(gap())
         .then(aliases.or_not().map(|x| x.unwrap_or(vec![])))
-        .then(chapters(hoon.clone(), spec.clone()))
+        .then(chapters(hoon.clone(), spec.clone(), linemap))
         .map(|((spec, alas), map_term_tome)| Hoon::BarCab(Box::new(spec), alas, map_term_tome))
 }
 

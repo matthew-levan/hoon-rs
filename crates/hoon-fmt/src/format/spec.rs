@@ -370,6 +370,7 @@ pub fn format_skin(skin: &Skin, config: &FormatterConfig) -> Doc {
             ])
         }
         Skin::Dbug(_spot, inner) => format_skin(inner, config),
+        Skin::Help(_help, inner) => format_skin(inner, config),
         Skin::Leaf(aura, value) => {
             if aura == "tas" {
                 let s = atom_to_cord(value);

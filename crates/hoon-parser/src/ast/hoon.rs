@@ -3,6 +3,7 @@ use std::ops::BitOr;
 
 use num_bigint::BigUint;
 use num_traits::Zero;
+
 #[derive(serde::Serialize, Hash, Eq, PartialEq, Debug, Clone)]
 pub enum NounExpr {
     ParsedAtom(ParsedAtom),
@@ -214,7 +215,7 @@ impl BinaryFloat {
         }
     }
 }
-pub type What = Option<(String, Vec<Vec<(bool, String)>>)>; // unused
+pub type What = Option<NounExpr>;
 pub type Tome = (What, HashMap<Term, Hoon>);
 pub type Tune = (HashMap<String, Option<Hoon>>, Vec<Hoon>);
 #[derive(serde::Serialize, PartialEq, Debug, Clone)]
@@ -354,6 +355,7 @@ pub type Term = String;
 pub enum Spec {
     Base(BaseType),
     Dbug(Spot, Box<Spec>),
+    Gist(NounExpr, Box<Spec>),
     Leaf(String, ParsedAtom),
     Like(WingType, Vec<WingType>),
     Loop(String),
@@ -409,6 +411,7 @@ pub enum NockHint {
 
 #[derive(serde::Serialize, PartialEq, Debug, Clone)]
 pub enum Note {
+    Help(NounExpr),
     Know(String),
     Made(String, Option<Vec<WingType>>),
 }
@@ -465,6 +468,7 @@ pub enum Skin {
     Base(BaseType),
     Cell(Box<Skin>, Box<Skin>),
     Dbug(Spot, Box<Skin>),
+    Help(NounExpr, Box<Skin>),
     Leaf(String, ParsedAtom),
     Name(String, Box<Skin>),
     Over(WingType, Box<Skin>),
@@ -524,7 +528,9 @@ pub struct Date {
 
 #[derive(serde::Serialize, PartialEq, Debug, Clone)]
 pub enum Hoon {
+    // Tuple pair
     Pair(Box<Hoon>, Box<Hoon>),
+    // Hoon's version of a panic/crash
     ZapZap,
     Axis(u64),
     Base(BaseType),
@@ -631,6 +637,7 @@ pub enum Hoon {
     WutPat(WingType, Box<Hoon>, Box<Hoon>),
     WutSig(WingType, Box<Hoon>, Box<Hoon>),
     WutHax(Skin, WingType),
+    // Yields a loobean (boolean) from a type match
     WutTis(Box<Spec>, WingType),
     WutZap(Box<Hoon>),
     ZapCom(Box<Hoon>, Box<Hoon>),

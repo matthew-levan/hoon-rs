@@ -11,6 +11,7 @@ pub fn ket_runes_tall<'src>(
     choice((
         just("|").ignore_then(ketbar(hoon.clone())),
         just('.').ignore_then(ketdot(hoon.clone())),
+        just(':').ignore_then(ketcol(spec.clone())),
         just('-').ignore_then(kethep(hoon.clone(), spec.clone())),
         just("+").ignore_then(ketlus(hoon.clone())),
         just("&").ignore_then(ketpam(hoon.clone())),
@@ -29,6 +30,7 @@ pub fn ket_runes_wide<'src>(
         just('~').ignore_then(ketsig_wide(hoon_wide.clone())),
         just("+").ignore_then(ketlus_wide(hoon_wide.clone())),
         just('.').ignore_then(ketdot_wide(hoon_wide.clone())),
+        just(':').ignore_then(ketcol_wide(spec_wide.clone())),
         just('-').ignore_then(kethep_wide(hoon_wide.clone(), spec_wide.clone())),
         just("|").ignore_then(ketbar_wide(hoon_wide.clone())),
         just("&").ignore_then(ketpam_wide(hoon_wide.clone())),
@@ -239,6 +241,15 @@ pub fn kethep_irregular<'src>(
         .map(|(s, w)| Hoon::KetHep(Box::new(s), Box::new(w)))
 }
 
+pub fn kethep_noun_irregular<'src>(
+    hoon_wide: impl ParserExt<'src, Hoon>,
+) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
+    just('*')
+        .ignore_then(just('`'))
+        .ignore_then(hoon_wide.clone())
+        .map(|w| Hoon::KetHep(Box::new(Spec::Base(BaseType::NounExpr)), Box::new(w)))
+}
+
 pub fn ketlus_irregular<'src>(
     hoon_wide: impl ParserExt<'src, Hoon>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
@@ -274,7 +285,9 @@ pub fn kettar_wide<'src>(
 pub fn ketcol<'src>(
     spec: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
-    one_spec_closed_tall(spec.clone()).map(|s| Hoon::KetCol(Box::new(s)))
+    gap()
+        .ignore_then(spec.clone())
+        .map(|s| Hoon::KetCol(Box::new(s)))
 }
 
 pub fn ketcol_wide<'src>(

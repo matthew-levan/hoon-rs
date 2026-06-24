@@ -1,3 +1,4 @@
+
 use chumsky::prelude::*;
 
 use crate::ast::hoon::*;
@@ -7,7 +8,7 @@ pub fn wut_runes_tall<'src>(
     hoon: impl ParserExt<'src, Hoon>,
     hoon_wide: impl ParserExt<'src, Hoon>,
     spec: impl ParserExt<'src, Spec>,
-    _spec_wide: impl ParserExt<'src, Spec>,
+    spec_wide: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     choice((
         just('~').ignore_then(wutsig(hoon.clone(), hoon_wide.clone())),
@@ -23,7 +24,7 @@ pub fn wut_runes_tall<'src>(
         just("+").ignore_then(wutlus(hoon.clone(), hoon_wide.clone(), spec.clone())),
         just('-').ignore_then(wuthep(hoon.clone(), hoon_wide.clone(), spec.clone())),
         just("!").ignore_then(wutzap(hoon.clone())),
-        // add wuthax here..
+        just('#').ignore_then(wuthax(hoon.clone(), hoon_wide.clone())),
     ))
 }
 
@@ -45,6 +46,7 @@ pub fn wut_runes_wide<'src>(
         just("+").ignore_then(wutlus_wide(hoon_wide.clone(), spec_wide.clone())),
         just('-').ignore_then(wuthep_wide(hoon_wide.clone(), spec_wide.clone())),
         just("!").ignore_then(wutzap_wide(hoon_wide.clone())),
+        just('#').ignore_then(wuthax_wide(hoon_wide.clone())),
     ))
 }
 
@@ -175,19 +177,33 @@ pub fn wutgar_wide<'src>(
         .map(|(p, q)| Hoon::WutGar(Box::new(p), Box::new(q)))
 }
 
-// pub fn wuthax<'src>(
-//     hoon:        impl ParserExt<'src, Hoon>,
-//     hoon_wide:   impl ParserExt<'src, Hoon>,
-// ) -> impl Parser<'src, &'src str, Hoon, Err<'src>>
-// where
-//     I: ValueInput<'tokens, Token = Token<'src>, Span = SimpleSpan>,
-// {
-//     gap()
-//     .ignore_then(hoon.clone())
-//     .then_ignore(gap())
-//     .then(tiki_tall(hoon.clone(), hoon_wide.clone()))
-//     .map(|(p, q)| WutHax(q, p))
-// }
+pub fn wuthax<'src>(
+    hoon: impl ParserExt<'src, Hoon>,
+    hoon_wide: impl ParserExt<'src, Hoon>,
+) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
+    gap()
+        .ignore_then(hoon.clone())
+        .then_ignore(gap())
+        .then(tiki_tall(hoon.clone(), hoon_wide.clone()))
+        .try_map(|(p, tik), span| match flay(p) {
+            Some(syn) => Ok(wthx(tik, syn)),
+            None => Err(Rich::custom(span, "invalid p in ?#p")),
+        })
+}
+
+pub fn wuthax_wide<'src>(
+    hoon_wide: impl ParserExt<'src, Hoon>,
+) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
+    hoon_wide
+        .clone()
+        .then_ignore(just(' '))
+        .then(tiki_wide(hoon_wide.clone()))
+        .delimited_by(just('('), just(')'))
+        .try_map(|(p, tik), span| match flay(p) {
+            Some(syn) => Ok(wthx(tik, syn)),
+            None => Err(Rich::custom(span, "invalid p in ?#(p q)")),
+        })
+}
 
 pub fn wuttis<'src>(
     hoon: impl ParserExt<'src, Hoon>,

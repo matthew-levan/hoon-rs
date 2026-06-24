@@ -100,7 +100,10 @@ fn hoon_wide_parser<'src>(
             ))
             .map(|h| Hoon::WutZap(Box::new(Hoon::WutZap(Box::new(h)))))
             .boxed(),
-        rune_branch!('|', bar_runes_wide(hoon_wide.clone(), spec_wide.clone())),
+        rune_branch!(
+            '|',
+            bar_runes_wide(hoon_wide.clone(), spec_wide.clone(), linemap.clone())
+        ),
         just('=')
             .ignore_then(choice((
                 tis_runes_wide(hoon_wide.clone(), spec_wide.clone()),
@@ -112,6 +115,7 @@ fn hoon_wide_parser<'src>(
             .ignore_then(choice((
                 wut_runes_wide(hoon_wide.clone(), spec_wide.clone()),
                 bucwut_irregular(spec_wide.clone()).boxed(), // ?(foo bar)
+                just('?').to(Hoon::Base(BaseType::Flag)).boxed(),
                 empty().to(Hoon::Base(BaseType::Flag)).boxed(),
             )))
             .boxed(),
@@ -170,6 +174,7 @@ fn hoon_wide_parser<'src>(
         just('`')
             .ignore_then(choice((
                 tic_aura(hoon_wide.clone()),                                    //  `@p`q
+                kethep_noun_irregular(hoon_wide.clone()).boxed(),               //  `*`q
                 kethep_irregular(hoon_wide.clone(), spec_wide.clone()).boxed(), //  `p`q
                 ketlus_irregular(hoon_wide.clone()),                            // `+p`q
                 tic_cell_construction(hoon_wide.clone()).boxed(),               //  `a
@@ -193,6 +198,7 @@ fn hoon_wide_parser<'src>(
             .map(|(p, q)| Hoon::Sand(p, NounExpr::ParsedAtom(q)))
             .boxed(), //  111.111, 0x1111, etc.
         wing().boxed(),                              //   foo, foo.bar, etc.
+        just('^').to(Hoon::Base(BaseType::Cell)).boxed(),
         constant(linemap.clone())
             .map(|coin| jock(true, &coin))
             .boxed(), //  %foo
@@ -263,24 +269,29 @@ pub fn hoon_parser<'src>(
             .boxed(),
         rune_branch_pair!(
             '|',
-            bar_runes_tall(hoon.clone(), spec.clone()),
-            bar_runes_wide(hoon_wide.clone(), spec_wide.clone())
+            bar_runes_tall(hoon.clone(), spec.clone(), linemap.clone()),
+            bar_runes_wide(hoon_wide.clone(), spec_wide.clone(), linemap.clone())
         ),
         rune_branch_pair!(
             '=',
             tis_runes_tall(hoon.clone(), spec.clone(), spec_wide.clone()),
             tis_runes_wide(hoon_wide.clone(), spec_wide.clone())
         ),
-        rune_branch_pair!(
-            '?',
-            wut_runes_tall(
-                hoon.clone(),
-                hoon_wide.clone(),
-                spec.clone(),
-                spec_wide.clone()
-            ),
-            wut_runes_wide(hoon_wide.clone(), spec_wide.clone())
-        ),
+        just('?')
+            .ignore_then(choice((
+                wut_runes_tall(
+                    hoon.clone(),
+                    hoon_wide.clone(),
+                    spec.clone(),
+                    spec_wide.clone(),
+                )
+                .boxed(),
+                wut_runes_wide(hoon_wide.clone(), spec_wide.clone()).boxed(),
+                bucwut_irregular(spec_wide.clone()).boxed(), // ?(foo bar)
+                just('?').to(Hoon::Base(BaseType::Flag)).boxed(),
+                empty().to(Hoon::Base(BaseType::Flag)).boxed(),
+            )))
+            .boxed(),
         rune_branch_pair!(
             '%',
             cen_runes_tall(hoon.clone()),
@@ -376,6 +387,7 @@ pub fn parser<'src>(
         spec_wide.clone(),
     )
     .map_with(wrap_spec_with_trace(wer.clone(), linemap.clone()))
+    .map_with(wrap_spec_with_docs(linemap.clone()))
     .labelled("Spec")
     .boxed();
 
@@ -383,6 +395,7 @@ pub fn parser<'src>(
 
     let spec_wide_body = spec_wide_parser(spec_wide.clone(), hoon_wide.clone(), linemap.clone())
         .map_with(wrap_spec_with_trace(wer.clone(), linemap.clone()))
+        .map_with(wrap_spec_with_docs(linemap.clone()))
         .labelled("Spec Wide")
         .boxed();
 
@@ -398,6 +411,7 @@ pub fn parser<'src>(
         linemap.clone(),
     )
     .map_with(wrap_hoon_with_trace(wer.clone(), linemap.clone()))
+    .map_with(wrap_hoon_with_docs(linemap.clone()))
     .labelled("Hoon Wide")
     .boxed();
 
@@ -416,6 +430,7 @@ pub fn parser<'src>(
         linemap.clone(),
     )
     .map_with(wrap_hoon_with_trace(wer.clone(), linemap.clone()))
+    .map_with(wrap_hoon_with_docs(linemap.clone()))
     .labelled("Hoon")
     .boxed();
 

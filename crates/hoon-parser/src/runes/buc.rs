@@ -27,6 +27,11 @@ pub fn buc_runes_tall<'src>(
         just(",").ignore_then(buccom(spec.clone())),
     ))
 }
+fn split_nonempty_spec_list(specs: &[Spec]) -> (&Spec, &[Spec]) {
+    specs
+        .split_first()
+        .expect("list_spec_closed parser returned an empty spec list")
+}
 
 pub fn buc_runes_wide<'src>(
     hoon_wide: impl ParserExt<'src, Hoon>,
@@ -192,7 +197,7 @@ pub fn bucwut<'src>(
         .then_ignore(gap())
         .then_ignore(just("=="))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Hoon::KetCol(Box::new(Spec::BucWut(
                 Box::new(first.clone()),
                 rest.to_vec(),
@@ -204,7 +209,7 @@ pub fn bucwut_wide<'src>(
     spec_wide: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     list_spec_closed_wide(spec_wide.clone()).map(|specs| {
-        let (first, rest) = specs.split_first().unwrap();
+        let (first, rest) = split_nonempty_spec_list(&specs);
         Hoon::KetCol(Box::new(Spec::BucWut(
             Box::new(first.clone()),
             rest.to_vec(),
@@ -324,7 +329,7 @@ pub fn buccol<'src>(
     spec: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     list_spec_closed_tall(spec.clone()).map(|specs| {
-        let (first, rest) = specs.split_first().unwrap();
+        let (first, rest) = split_nonempty_spec_list(&specs);
         Hoon::KetCol(Box::new(Spec::BucCol(
             Box::new(first.clone()),
             rest.to_vec(),
@@ -342,7 +347,7 @@ pub fn buccol_spec_wide<'src>(
     spec_wide: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Spec, Err<'src>> {
     list_spec_closed_wide(spec_wide.clone()).map(|specs| {
-        let (first, rest) = specs.split_first().unwrap();
+        let (first, rest) = split_nonempty_spec_list(&specs);
         Spec::BucCol(Box::new(first.clone()), rest.to_vec())
     })
 }
@@ -371,7 +376,7 @@ pub fn buccen_wide<'src>(
         .collect::<Vec<_>>()
         .delimited_by(just('('), just(')'))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Hoon::KetCol(Box::new(Spec::BucCen(
                 Box::new(first.clone()),
                 rest.to_vec(),
@@ -469,14 +474,19 @@ pub fn buclus_spec<'src>(
 pub fn bucwut_irregular<'src>(
     spec_wide: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
-    spec_wide
-        .clone()
-        .separated_by(just(' '))
-        .at_least(1)
-        .collect::<Vec<_>>()
-        .delimited_by(just('('), just(')'))
+    just(' ')
+        .repeated()
+        .ignored()
+        .ignore_then(
+            spec_wide
+                .clone()
+                .separated_by(just(' '))
+                .at_least(1)
+                .collect::<Vec<_>>()
+                .delimited_by(just('('), just(')')),
+        )
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Hoon::KetCol(Box::new(Spec::BucWut(
                 Box::new(first.clone()),
                 rest.to_vec(),
@@ -497,7 +507,7 @@ pub fn bucwut_irregular_spec<'src>(
         )
         .then_ignore(just(')'))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucWut(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -541,7 +551,7 @@ pub fn bucwut_spec<'src>(
         .then_ignore(gap())
         .then_ignore(just("=="))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucWut(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -556,7 +566,7 @@ pub fn bucwut_spec_wide<'src>(
         .collect::<Vec<_>>()
         .delimited_by(just('('), just(')'))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucWut(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -615,7 +625,7 @@ pub fn buccol_irregular<'src>(
         .collect::<Vec<_>>()
         .delimited_by(just("["), just("]"))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucCol(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -640,7 +650,7 @@ pub fn buclus_spec_wide<'src>(
 pub fn buchep_spec<'src>(
     spec: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Spec, Err<'src>> {
-    two_specs_closed_tall(spec.clone()).map(|(p, q)| Spec::BucHep(Box::new(p), Box::new(q)))
+    two_specs_tall(spec.clone()).map(|(p, q)| Spec::BucHep(Box::new(p), Box::new(q)))
 }
 
 pub fn buchep_spec_wide<'src>(
@@ -668,7 +678,7 @@ pub fn buccol_spec<'src>(
         .then_ignore(gap())
         .then_ignore(just("=="))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucCol(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -690,7 +700,7 @@ pub fn buccen_spec_wide<'src>(
         .collect::<Vec<_>>()
         .delimited_by(just('('), just(')'))
         .map(|specs| {
-            let (first, rest) = specs.split_first().unwrap();
+            let (first, rest) = split_nonempty_spec_list(&specs);
             Spec::BucCen(Box::new(first.clone()), rest.to_vec())
         })
 }
@@ -699,7 +709,7 @@ pub fn buccen_spec<'src>(
     spec: impl ParserExt<'src, Spec>,
 ) -> impl Parser<'src, &'src str, Spec, Err<'src>> {
     list_spec_closed_tall(spec.clone()).map(|specs| {
-        let (first, rest) = specs.split_first().unwrap();
+        let (first, rest) = split_nonempty_spec_list(&specs);
         Spec::BucCen(Box::new(first.clone()), rest.to_vec())
     })
 }
