@@ -2,8 +2,13 @@
 #
 # Triggers:
 #   - Push of a version tag (v*.*.*) → builds, packages, creates GitHub Release,
-#     and publishes to the VSCode Marketplace.
+#     and publishes to the VSCode Marketplace and the Open VSX Registry.
 #   - Manual workflow_dispatch → builds and packages only (no publish).
+#
+# Required repository secrets:
+#   - VSCE_PAT: VS Code Marketplace personal access token.
+#   - OVSX_PAT: Open VSX Registry access token (https://open-vsx.org). If unset,
+#     the Open VSX publish step is skipped (the rest of the release still runs).
 
 name: VSCode Extension
 
@@ -197,8 +202,8 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install vsce
-        run: npm install -g @vscode/vsce
+      - name: Install vsce + ovsx
+        run: npm install -g @vscode/vsce ovsx
 
       - name: Publish to VS Code Marketplace
         env:
@@ -206,3 +211,16 @@ jobs:
         run: |
           VSIX=$(ls dist/*.vsix | head -1)
           vsce publish --packagePath "$VSIX"
+
+      - name: Publish to Open VSX Registry
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "OVSX_PAT secret not set — skipping Open VSX publish."
+            exit 0
+          fi
+          VSIX=$(ls dist/*.vsix | head -1)
+          # Ensure the publisher namespace exists (no-op if it already does).
+          ovsx create-namespace MatthewLeVan -p "$OVSX_PAT" || true
+          ovsx publish "$VSIX" -p "$OVSX_PAT"
