@@ -282,7 +282,11 @@ pub fn siggar<'src>(
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
         .ignore_then(term())
-        .then(just('.').ignore_then(hoon_wide.clone()).or_not())
+        .then(
+            just('.')
+                .ignore_then(gap().or_not().ignore_then(hoon_wide.clone()))
+                .or_not(),
+        )
         .then_ignore(gap())
         .then(hoon_wide.clone())
         .map(|((term, maybe_hoon), q)| match maybe_hoon {
@@ -296,7 +300,11 @@ pub fn siggal<'src>(
 ) -> impl Parser<'src, &'src str, Hoon, Err<'src>> {
     gap()
         .ignore_then(term())
-        .then(just('.').ignore_then(hoon_wide.clone()).or_not())
+        .then(
+            just('.')
+                .ignore_then(gap().or_not().ignore_then(hoon_wide.clone()))
+                .or_not(),
+        )
         .then_ignore(gap())
         .then(hoon_wide.clone())
         .map(|((term, maybe_hoon), q)| match maybe_hoon {
